@@ -3,6 +3,8 @@ package com.example.alunoifpe.wireframe;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
+import android.app.Dialog;
+import android.app.DialogFragment;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
@@ -10,6 +12,11 @@ import android.graphics.Color;
 import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Handler;
+import android.os.Parcelable;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -24,9 +31,13 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.Toast;
 
+import org.json.JSONException;
+
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -47,12 +58,13 @@ public class Game extends AppCompatActivity implements View.OnClickListener {
     private String nivel;
     private int linhas;
     private int colunas;
-
+    private int cont = 0;
     private int color_Green = Color.parseColor("#42f448");
     private int color_Red = Color.parseColor("#f42c22");
 
     private ArrayList<ImageButton> matriz = new ArrayList<ImageButton>();
     private ArrayList<ImageButton> cards;
+    private int seed = 10;
 
 
     @Override
@@ -73,14 +85,27 @@ public class Game extends AppCompatActivity implements View.OnClickListener {
         cards = new ArrayList<>(NUMBER_CARDS);
 
 
-        for (int i = 0; i < NUMBER_CARDS; i++){
-            ImageButton image = new ImageButton(Game.this);
-            image.setImageResource(R.mipmap.ic_costas);
-            image.setAdjustViewBounds(true);
-            image.setOnClickListener(this);
-            image.setTag(new CardInfo(resource[i % nivel()]));
-            cards.add(image);
+        Readjson rd = new Readjson();
+        try {
+            rd.lerjson(this);
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
+        for(int p = 0; p< 2; p++){
+
+            for (int i = 0; i < nivel(); i++){
+                ImageButton image = new ImageButton(Game.this);
+                image.setImageResource(R.mipmap.ic_costas);
+                image.setAdjustViewBounds(true);
+                image.setOnClickListener(this);
+                System.out.println(rd.getListLocais(i).getName());
+                //System.out.println("i -> " + i);
+                image.setTag(new CardInfo(resource[i % nivel()] , rd.getListLocais(i).getName()));
+
+                cards.add(image);
+            }
+        }
+        System.out.println(cards.size());
 
         Collections.shuffle(cards);
 
@@ -128,8 +153,6 @@ public class Game extends AppCompatActivity implements View.OnClickListener {
 
     @Override
     public void onClick(View v) {
-
-
 
 
             /*
@@ -184,11 +207,67 @@ public class Game extends AppCompatActivity implements View.OnClickListener {
                             oldCardButton.setBackgroundColor(color_Green);
                             newCardButton.setBackgroundColor(color_Green);
 
-
-
                             CharSequence text = "Você Acertou!!";
                             int duration = Toast.LENGTH_SHORT;
+                            cont++;
+                            Readjson rj =  new Readjson();
+                            try {
+                                rj.lerjson(this);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                            TestFragment mydialog = new TestFragment();
+                            Bundle bundle = new Bundle();
+                            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+                            Fragment prev =  getSupportFragmentManager().findFragmentByTag("mydialog");
+                            //ft.replace(R.id.frlayout,mydialog);
+                            //ft.commit();
+                            if(prev != null){
+                                ft.remove(prev);
+                            }
 
+                            ft.addToBackStack(null);
+                            //dialogFragment.show(ftt,"dialog");
+                            for (ImageButton i : cards){
+
+                                if(i == oldCardButton){
+                                    System.out.println("----- bundle -------");
+
+                                    for (Locais z : rj.ListLocais()){
+
+                                        if(i.getTag() == z.getResource()){
+                                            System.out.println("Entrou");
+                                        }
+
+                                    }
+                                    //System.out.println(i);
+                                    Intent intent = new Intent();
+                                    CardInfo cdinfo = (CardInfo) i.getTag();
+                                    System.out.println(cdinfo.getId());
+                                    System.out.println(cdinfo.getName());
+                                    bundle.putString("resource", cdinfo.getName());
+                                    bundle.putInt("nivel", nivel());
+                                    bundle.putInt("seed", seed);
+                                    bundle.putInt("n_cards", nivel()*2);
+
+
+
+                                }
+                            }
+                            mydialog.setArguments(bundle);
+                            mydialog.show(ft,"mydialog");
+
+                            if((cont * 2) == cards.size()){
+                                final Handler handler = new Handler();
+                                final Intent intent = new Intent(this, Acertou.class);
+                                handler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run(){
+                                        startActivity(intent);
+                                    }
+                                }, 1500);
+
+                            }
                             /*oldCardButton.postDelayed(new Runnable() {
                                 @Override
                                 public void run() {
